@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>discocan</title>
+    <style>
+      :root {
+        --bg:        #0d1117;
+        --bg-card:   #161b22;
+        --bg-input:  #1c2128;
+        --border:    #30363d;
+        --text:      #c9d1d9;
+        --text-dim:  #8b949e;
+        --accent:    #58a6ff;
+        --rx:        #56d364;
+        --tx:        #79c0ff;
+        --warn:      #d29922;
+        --error:     #f85149;
+        --success:   #2ea043;
+        --punch:     #c77dff;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; }
+      body {
+        font-family: ui-monospace, "SF Mono", Consolas, Menlo, monospace;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        font-size: 13px;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.5rem 1rem;
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      header h1 {
+        font-size: 1.05rem;
+        color: var(--accent);
+        letter-spacing: 0.04em;
+      }
+      header .tabs {
+        display: flex;
+        gap: 4px;
+        flex: 1;
+      }
+      header .tab {
+        background: var(--bg-input);
+        color: var(--text-dim);
+        border: 1px solid var(--border);
+        padding: 5px 14px;
+        border-radius: 3px;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.85rem;
+        letter-spacing: 0.04em;
+      }
+      header .tab:hover {
+        background: #232a32;
+        color: var(--text);
+      }
+      header .tab.active {
+        background: var(--accent);
+        color: var(--bg);
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+
+      main {
+        flex: 1;
+        padding: 0.75rem;
+        overflow: hidden;
+        min-height: 0;
+        display: flex;
+      }
+      main > * {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+      }
+      main thermometer-widget {
+        max-width: 720px;
+        margin: 0 auto;
+        flex: 0 0 auto;
+        align-self: flex-start;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>discocan</h1>
+      <nav class="tabs" id="tabs">
+        <button class="tab" data-mode="can">CAN trace</button>
+        <button class="tab" data-mode="thermo">Thermometer</button>
+        <button class="tab" data-mode="pp">Punchpress</button>
+      </nav>
+      <connection-status></connection-status>
+    </header>
+    <main>
+      <can-trace></can-trace>
+      <thermometer-widget></thermometer-widget>
+      <punchpress-widget></punchpress-widget>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+    <script>
+      // Three exclusive modes: CAN trace / Thermometer / Punchpress.
+      const KEY = "discocan.mode";
+      const tabs = document.getElementById("tabs");
+      const widgets = {
+        can:    document.querySelector("can-trace"),
+        thermo: document.querySelector("thermometer-widget"),
+        pp:     document.querySelector("punchpress-widget"),
+      };
+
+      function applyMode(mode) {
+        if (!widgets[mode]) mode = "can";
+        for (const [m, el] of Object.entries(widgets)) {
+          el.style.display = (m === mode) ? "" : "none";
+        }
+        for (const btn of tabs.querySelectorAll(".tab")) {
+          btn.classList.toggle("active", btn.dataset.mode === mode);
+        }
+      }
+
+      tabs.addEventListener("click", (e) => {
+        const btn = e.target.closest(".tab");
+        if (!btn) return;
+        const mode = btn.dataset.mode;
+        localStorage.setItem(KEY, mode);
+        applyMode(mode);
+      });
+
+      applyMode(localStorage.getItem(KEY) || "can");
+    </script>
+  </body>
+</html>

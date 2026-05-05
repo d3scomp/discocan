@@ -1,0 +1,6 @@
+__pycache__
+.idea
+/web/node_modules
+/discocan/server/static
+.claude
+.venv
