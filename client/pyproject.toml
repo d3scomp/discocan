@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "discocan"
-version = "0.1.0"
+version = "0.1.1"
 description = "USB-CAN adapter monitor with TUI, web dashboard, and REST/WS server"
 readme = "README.md"
 requires-python = ">=3.11"
