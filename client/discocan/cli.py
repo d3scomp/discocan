@@ -77,6 +77,17 @@ async def _run(
     from discocan.store import Store
     from discocan.tui.app import DiscocanApp
 
+    # Windows ProactorEventLoop logs a noisy traceback when a peer forcibly
+    # closes a connection (WinError 10054) — the asyncio default handler reports
+    # ConnectionResetError raised inside _call_connection_lost. Nothing the app
+    # can act on; swallow it but defer everything else to the default handler.
+    def _exc_filter(loop: asyncio.AbstractEventLoop, ctx: dict) -> None:
+        if isinstance(ctx.get("exception"), ConnectionResetError):
+            return
+        loop.default_exception_handler(ctx)
+
+    asyncio.get_running_loop().set_exception_handler(_exc_filter)
+
     try:
         device = DeviceManager(port)
     except DeviceNotFoundError as e:
@@ -108,7 +119,16 @@ async def _run(
     device.set_state_handler(lambda state: bus.publish_sync({"type": "connection_state", "state": state}))
 
     fastapi_app = create_app(device, store, bus, auto_run)
-    uvi_config = uvicorn.Config(fastapi_app, host="0.0.0.0", port=web_port, log_level="warning", ws="wsproto")
+    uvi_config = uvicorn.Config(
+        fastapi_app,
+        host="0.0.0.0",
+        port=web_port,
+        log_level="warning",
+        ws="wsproto",
+        # Don't wait forever for stuck clients (e.g. dangling WebSocket) when
+        # Ctrl-C is pressed; force-close after this many seconds.
+        timeout_graceful_shutdown=2,
+    )
     uvi_server = uvicorn.Server(uvi_config)
 
     device_task = asyncio.create_task(device.run(), name="device")

@@ -32,7 +32,6 @@ classifiers = [
 ]
 dependencies = [
     "pyserial>=3.5",
-    "crcmod>=1.7",
     "textual>=0.80",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",

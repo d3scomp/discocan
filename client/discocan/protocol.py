@@ -5,8 +5,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
 
-import crcmod
-
 # Protocol constants
 HEADER = bytes([0xAA, 0x55])
 PACKET_TYPE_CAN_FRAME = 0x01           # CAN frame received from the bus (rx)
@@ -15,8 +13,28 @@ PACKET_TYPE_SIMULATION_STATUS = 0x03
 PACKET_TYPE_SIMULATION_PUNCH = 0x04
 PACKET_TYPE_CAN_TX_FRAME = 0x05        # CAN frame the firmware put on the bus
 
-# CRC-32/MPEG-2: poly 0x04C11DB7, init 0xFFFFFFFF, no reflection, no final XOR
-crc32_mpeg2 = crcmod.mkCrcFun(0x104C11DB7, initCrc=0xFFFFFFFF, rev=False, xorOut=0)
+
+# CRC-32/MPEG-2: poly 0x04C11DB7, init 0xFFFFFFFF, no reflection, no final XOR.
+# Matches the STM32 hardware CRC unit fed 32-bit words via __REV.
+def _build_crc32_mpeg2_table() -> tuple[int, ...]:
+    table: list[int] = []
+    for byte in range(256):
+        crc = byte << 24
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x04C11DB7) if (crc & 0x80000000) else (crc << 1)
+            crc &= 0xFFFFFFFF
+        table.append(crc)
+    return tuple(table)
+
+
+_CRC32_MPEG2_TABLE = _build_crc32_mpeg2_table()
+
+
+def crc32_mpeg2(data: bytes) -> int:
+    crc = 0xFFFFFFFF
+    for byte in data:
+        crc = ((crc << 8) & 0xFFFFFFFF) ^ _CRC32_MPEG2_TABLE[((crc >> 24) ^ byte) & 0xFF]
+    return crc
 
 
 class Packet(ABC):
